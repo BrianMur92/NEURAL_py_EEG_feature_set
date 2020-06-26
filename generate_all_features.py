@@ -104,7 +104,7 @@ def overlap_epochs(x, Fs, L_window, overlap=50, window_type='rect'):
     return x_epochs
 
 
-def generate_all_features(data, save_p_l=None, channel_names=None, feat_set=None):
+def generate_all_features(data, save_p_l=None, channel_names=None, feat_set=None, params=None):
     """
     Syntax: feat_st = generate_all_features(data, save_path, channel_names, feat_set)
 
@@ -138,7 +138,8 @@ def generate_all_features(data, save_p_l=None, channel_names=None, feat_set=None
         generate_all_features.generate_all_features(data_st, feat_set=feature_set)
     """
 
-    params = NEURAL_parameters.NEURAL_parameters()
+    if params is None:
+        params = NEURAL_parameters.NEURAL_parameters()
 
     # ---------------------------------------------------------------------
     # 1. load EEG data from .csv file
@@ -234,13 +235,13 @@ def generate_all_features(data, save_p_l=None, channel_names=None, feat_set=None
                     L_nans = len(np.where(np.isnan(x_epochs[e, :]))[0])
                     if 100*(L_nans / len(x_epochs[e, :])) < params['EPOCH_IGNORE_PRC_NANS']:
                         if feat_group == 'spectral':
-                            tmp = spectral_features.main_spectral(x_epochs[e, :], Fs, feat_set[n])
+                            tmp = spectral_features.main_spectral(x_epochs[e, :], Fs, feat_set[n], params=params)
                         elif feat_group == 'FD':
-                            tmp = fd_features.main_fd(x_epochs[e, :], Fs, feat_set[n])
+                            tmp = fd_features.main_fd(x_epochs[e, :], Fs, feat_set[n], params=params)
                         elif feat_group == 'amplitude':
-                            tmp = amplitude_features.main_amplitude(x_epochs[e, :], Fs, feat_set[n])
+                            tmp = amplitude_features.main_amplitude(x_epochs[e, :], Fs, feat_set[n], params=params)
                         elif feat_group == 'rEEG':
-                            tmp = rEEG.main_rEEG(x_epochs[e, :], Fs, feat_set[n])
+                            tmp = rEEG.main_rEEG(x_epochs[e, :], Fs, feat_set[n], params=params)
                         else:
                             raise ValueError('Incorrect "feat_group" - should not have entered here')
 

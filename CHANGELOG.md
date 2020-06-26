@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file. Project fir
 
 ## unreleased
 
+## [0.1.1] - 2020-06-26
+### Added
+- Added option to pass in parameters so NEURAL_parameters.py does not need to be altered
+### Fixed
+- Fixed bug when user wants to generate 1 frequency band instead of multiple
+
+
 ### Changed 
 ### Removed
 ### Fixed
@@ -15,4 +22,5 @@ All notable changes to this project will be documented in this file. Project fir
 
 
 [0.1.0]: https://github.com/BrianMur92/NEURAL_py_EEG_feature_set/releases/tag/0.1.0
+[0.1.1]: https://github.com/BrianMur92/NEURAL_py_EEG_feature_set/releases/tag/0.1.1
 

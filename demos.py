@@ -7,6 +7,7 @@ import preprocessing_EEG
 import numpy as np
 import generate_all_features
 import time
+import NEURAL_parameters
 
 
 def artefact_removal_examples():
@@ -70,7 +71,7 @@ def generate_a_subset_of_features_example():
 
 
 def generate_all_features_example():
-    print('Running generate_a_subset_of_features_example function')
+    print('Running generate_all_features_example function')
     Fs = 64  # sampling frequency
 
     # generate EEG-like data (coloured Gaussian noise)
@@ -84,7 +85,7 @@ def generate_all_features_example():
 
     print('Features extracted')
     print(feat_pd_names)
-    print('The generate_a_subset_of_features_example function has finished')
+    print('The generate_all_features_example function has finished')
     print('\n\n\n\n')
 
 
@@ -163,4 +164,36 @@ def load_edf_preprocessing_and_feature_extraction():
     print('Features extracted - time taken %s' % str(time.time() - t))
     print(feat_pd_names)
     print('The load_edf_preprocessing_and_feature_extraction function has finished')
+    print('\n\n\n\n')
+
+
+def example_passing_in_own_params():
+    params = NEURAL_parameters.NEURAL_parameters()
+    print("We'll change some default parameters")
+
+    print("\n\nPlease note that the params passed into the functions have to have the same structure as "
+          "NEURAL_parameters.NEURAL_parameters()\n\n")
+
+    print("Compute rEEG features on 1 band - 1 - 20")
+    params['rEEG']['freq_bands'] = [[1, 20]]
+    print("We'll change the epoch length to 32 seconds")
+    params['EPOCH_LENGTH'] = 32
+
+
+    print('Running example_passing_in_own_params function')
+    Fs = 64  # sampling frequency
+
+    # generate EEG-like data (coloured Gaussian noise)
+    print('Generating EEG data using the utils.gen_test_EEGdata function')
+    data_st = utils.gen_test_EEGdata(5 * 60, Fs, 1)
+
+    # estimate features:
+    print('Estimating features')
+    feats_per_epochs, feat_pd_names, feat_st, feats_median_ch, feats_median_all = \
+        generate_all_features.generate_all_features(data_st, params=params)
+
+    print("Features extracted. \nThe rEEG_mean feature name is: ", feat_pd_names[66])
+    print('This just shows that the default parameters can be altered. The full list of features is:')
+    print(feat_pd_names)
+    print('The example_passing_in_own_params function has finished')
     print('\n\n\n\n')

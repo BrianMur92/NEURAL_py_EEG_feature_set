@@ -203,12 +203,13 @@ def main_rEEG(x, Fs, feat_name, params=None):
             params = params['rEEG']
         else:
             raise ValueError('No default parameters found')
-    elif len(params) == 0:
-        params = NEURAL_parameters.NEURAL_parameters()
+    else:
         if 'rEEG' in params:
             params = params['rEEG']
         else:
-            raise ValueError('No default parameters found')
+            raise ValueError('No parameters found')
+
+
 
     freq_bands = params['freq_bands']
 

@@ -136,12 +136,11 @@ def main_fd(x, fs, feat_name='fd_higuchi', params=None):
             params = params['FD']
         else:
             raise ValueError('No default parameters found')
-    elif len(params) == 0:
-        params = NEURAL_parameters.NEURAL_parameters()
+    else:
         if 'FD' in params:
             params = params['FD']
         else:
-            raise ValueError('No default parameters found')
+            raise ValueError('No parameters found')
 
 
     freq_bands = np.array(params['freq_bands'])

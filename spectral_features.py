@@ -447,12 +447,11 @@ def main_spectral(x, Fs, feat_name, params=None):
             params = params['spectral']
         else:
             raise ValueError('No default parameters found')
-    elif len(params) == 0:
-        params = NEURAL_parameters.NEURAL_parameters()
+    else:
         if 'spectral' in params:
             params = params['spectral']
         else:
-            raise ValueError('No default parameters found')
+            raise ValueError('No parameters found')
 
     try:
         if feat_name == 'spectral_relative_power':

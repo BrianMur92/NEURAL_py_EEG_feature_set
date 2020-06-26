@@ -107,7 +107,7 @@ def overlap_epochs(x, Fs, L_window, overlap=50, window_type='rect'):
     return x_epochs, x_epochs_inds.astype(int)
 
 
-def art_per_channel(x, Fs, DBverbose):
+def art_per_channel(x, Fs, DBverbose, params=None):
     """
     Remove artefacts on a per-channel basis
 
@@ -116,7 +116,8 @@ def art_per_channel(x, Fs, DBverbose):
     :param Fs: sampling frequency
     :return: x, data with artefacts set as nan
     """
-    params = NEURAL_parameters.NEURAL_parameters()
+    if params is None:
+        params = NEURAL_parameters.NEURAL_parameters()
 
     # DBverbose = 1
     N = len(x)  # verify / check this
@@ -224,7 +225,7 @@ def art_per_channel(x, Fs, DBverbose):
     return x, amount_removed
 
 
-def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref):
+def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
     """
     remove_artefacts: simple procedure to remove artefacts
 
@@ -270,7 +271,8 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref):
         eeg_art = preprocessing_EEG.remove_artefacts(data_st['eeg_data'].copy(), data_st['ch_labels'], data_st['Fs'],
                                          data_st['eeg_data_ref'], data_st['ch_labels_ref'])
     """
-    params = NEURAL_parameters.NEURAL_parameters()
+    if params is None:
+        params = NEURAL_parameters.NEURAL_parameters()
     DBverbose = 1
 
     N, N_channels = data.shape
@@ -368,7 +370,7 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref):
     ct = 0
 
     for n in ichannels:
-        data[ch_labels[n]], tmpp = art_per_channel(data[ch_labels[n]].to_numpy(), Fs, DBverbose)
+        data[ch_labels[n]], tmpp = art_per_channel(data[ch_labels[n]].to_numpy(), Fs, DBverbose, params=params)
         if ct == 0:
             amount_removed[ct, :] = tmpp
         else:
@@ -391,7 +393,7 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref):
     return data, out
 
 
-def LPF_zero_phase(pd_data, Fs):
+def LPF_zero_phase(pd_data, Fs, params=None):
     """
 
     (pd) -> pd
@@ -402,7 +404,8 @@ def LPF_zero_phase(pd_data, Fs):
     data
 
     """
-    params = NEURAL_parameters.NEURAL_parameters()
+    if params is None:
+        params = NEURAL_parameters.NEURAL_parameters()
     lp = params['LP_fc']
 
     cols = list(pd_data.columns)
@@ -468,7 +471,7 @@ def signal_downsample(pd_data, Fs, Fs_new):
     return pd_data_downsample, Fs_new
 
 
-def main_preprocessing(file, save_converted=None, save=0, Fs_new=64):
+def main_preprocessing(file, save_converted=None, save=0, Fs_new=64, params=None):
     """
     This function is used to  a) read in EEG from .edf files
                               b) remove artefacts
@@ -483,9 +486,9 @@ def main_preprocessing(file, save_converted=None, save=0, Fs_new=64):
     montage_data, dum = utils.set_bi_montage(data, Fs)
 
     clean_data, amount_removed = remove_artefacts(montage_data.copy(), np.array(list(montage_data.columns)), Fs, data,
-                                                  np.array(list(data.columns)))
+                                                  np.array(list(data.columns)), params=params)
 
-    filtered_data = LPF_zero_phase(clean_data.copy(), Fs)
+    filtered_data = LPF_zero_phase(clean_data.copy(), Fs, params=params)
 
     down_sampled_data, Fs = signal_downsample(filtered_data.copy(), Fs, Fs_new)
 

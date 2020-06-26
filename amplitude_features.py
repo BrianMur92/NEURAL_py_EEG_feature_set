@@ -117,12 +117,11 @@ def main_amplitude(x, Fs, feat_name, params=None):
             params = params['amplitude']
         else:
             raise ValueError('No default parameters found')
-    elif len(params) == 0:
-        params = NEURAL_parameters.NEURAL_parameters()
+    else:
         if 'amplitude' in params:
             params = params['amplitude']
         else:
-            raise ValueError('No default parameters found')
+            raise ValueError('No parameters found')
 
     freq_bands = params['freq_bands']
 
