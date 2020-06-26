@@ -337,7 +337,9 @@ def get_feature_names(params, feat_set):
             bands = np.array(params[feat_group]['freq_bands'])
 
 
-        if bands.ndim == 1:
+        if np.array(bands).size == 2:
+            if bands.ndim != 1:
+                bands = [bands[0][0], bands[0][1]]
             N_bands = 1
         else:
             N_bands = bands.shape[0]
@@ -414,7 +416,9 @@ def add_feat_data_to_array(all_data, new_data, feat_pd_names, feat_name, params)
     else:
         bands = np.array(params[feat_group]['freq_bands'])
 
-    if bands.ndim == 1:
+    if np.array(bands).size == 2:
+        if bands.ndim != 1:
+            bands = [bands[0][0], bands[0][1]]
         N_bands = 1
     else:
         N_bands = bands.shape[0]
