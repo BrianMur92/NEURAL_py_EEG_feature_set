@@ -34,7 +34,7 @@ Python 3.7 or newer with the following packages installed
 ## Use 
 
 Set path `(path_to_NEURAL_py)` to the folder location of NEURAL_py. Then the following will load the main functions:
-```
+```python
   import sys
   sys.path.append(path_to_NEURAL_py)
   import utils,  preprocessing_EEG, generate_all_features
@@ -42,7 +42,7 @@ Set path `(path_to_NEURAL_py)` to the folder location of NEURAL_py. Then the fol
 
 As an example, generate simulated EEG and calculate relative spectral power, standard
 deviation of range-EEG, and brain symmetry index:
-```
+```python
   # generate EEG-like data (coloured Gaussian noise)
   data_st = utils.gen_test_EEGdata(5*60,64,1)
 
@@ -57,7 +57,7 @@ deviation of range-EEG, and brain symmetry index:
 ```
 
 See the `demos.py` file for further examples. To run the demo code without previously adding the package:
-```
+```python
   import sys
   sys.path.append(path_to_NEURAL_py)
   import demos

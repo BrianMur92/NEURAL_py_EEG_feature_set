@@ -280,7 +280,7 @@ def generate_all_features(data, save_p_l=None, channel_names=None, feat_set=None
                 x_ep = x_epochs[:, e, :]
                 L_nans = len(np.where(np.isnan(x_ep))[0])
                 if 100 * (L_nans / x_ep.size) < params['EPOCH_IGNORE_PRC_NANS']:
-                    tmp = connectivity_features.main_connectivity(x_ep, Fs, feat_set[n], ch_labels)
+                    tmp = connectivity_features.main_connectivity(x_ep, Fs, feat_set[n], ch_labels, params=params)
                     feats_epochs[e, :] = tmp
             # Median over all epochs
             feat_st[feat_set[n]] = np.nanmedian(feats_epochs, axis=0)
