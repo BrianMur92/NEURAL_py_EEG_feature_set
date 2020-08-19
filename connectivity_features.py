@@ -646,28 +646,25 @@ def main_connectivity(x, Fs, feat_name, ch_labels, params=None):
 
     N_channels, dum = x.shape
 
-    if N_channels < 2:
-        warnings.warn("Requires at least 2 channels", DeprecationWarning)
-        return np.nan
-
     N_freq_bands, dum = freq_bands.shape
     if N_freq_bands == 0:
         N_freq_bands = 1
 
-    ileft = []
-    iright = []
-    ipairs = []
-    if N_channels > 2 and len(ch_labels) != 0:
+    if len(ch_labels) == 0:
+        warnings.warn('Channel labels are needed for connectivity measures')
+        output = np.ones(N_freq_bands)
+        return output.fill(np.nan)
+
+    if N_channels >= 2:
         ileft, iright = channel_hemispheres(ch_labels)
         ipairs = channel_hemisphere_pairs(ch_labels)
-    elif N_channels == 2:
-        # if no channel labels then guess
-        ileft = 0
-        iright = 1
-        ipairs = np.array([1, 2])
+    else:
+        output = np.ones(N_freq_bands)
+        return output.fill(np.nan)
 
     if ipairs.shape[1] == 0:
-        return np.array([np.nan, np.nan, np.nan, np.nan])
+        output = np.ones(N_freq_bands)
+        return output.fill(np.nan)
     try:
         if feat_name == 'connectivity_coh_mean' or feat_name == 'connectivity_coh_max' or \
                 feat_name == 'connectivity_coh_freqmax':
