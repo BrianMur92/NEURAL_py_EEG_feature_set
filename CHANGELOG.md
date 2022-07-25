@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file. Project fir
 ### Fixed
 ### Added
 
-## [0.1.1] - 25-08-2022
+## [0.1.3] - 25-08-2022
 ### Changed 
 - Changed the file structure to be package compliant
 ### Removed
@@ -29,5 +29,5 @@ All notable changes to this project will be documented in this file. Project fir
 
 
 [0.1.0]: https://github.com/BrianMur92/NEURAL_py_EEG_feature_set/releases/tag/0.1.0
-[0.1.1]: https://github.com/BrianMur92/NEURAL_py_EEG_feature_set/releases/tag/0.1.1
+[0.1.3]: https://github.com/BrianMur92/NEURAL_py_EEG_feature_set/releases/tag/0.1.1
 
