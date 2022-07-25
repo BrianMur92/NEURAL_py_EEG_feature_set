@@ -1,11 +1,12 @@
 # Author:       Brian Murphy
 # Date started: 30/01/2020
-# Last updated: <17/02/2020 13:02:19 (BrianM)>
+# Last updated: <25/07/2022 16:40:13 (BrianM)>
 
-import utils
+from NEURAL_py_EEG import utils
 import math
 import numpy as np
-import NEURAL_parameters
+from NEURAL_py_EEG import NEURAL_parameters
+
 
 def mat_percentile(x, q):
     """
@@ -18,8 +19,7 @@ def mat_percentile(x, q):
     x = np.delete(x, np.where(np.isnan(x))[0])
     n = len(x)
     y = np.sort(x)
-    return np.interp(q, np.linspace(1/(2*n), (2*n-1)/(2*n), n), y)
-
+    return np.interp(q, np.linspace(1 / (2 * n), (2 * n - 1) / (2 * n), n), y)
 
 
 def gen_rEEG(data, win_overlap, win_length, win_type, fs, APPLY_LOG_LINEAR_SCALE):
@@ -34,9 +34,11 @@ def gen_rEEG(data, win_overlap, win_length, win_type, fs, APPLY_LOG_LINEAR_SCALE
     win_length for this refers to 2 seconds by default
 
     """
-    L_hop, L_epoch, win_epoch = utils.gen_epoch_window(win_overlap, win_length, win_type, fs)
+    L_hop, L_epoch, win_epoch = utils.gen_epoch_window(
+        win_overlap, win_length, win_type, fs
+    )
     N = len(data)
-    N_epochs = math.floor((N - (L_epoch - L_hop))/L_hop)
+    N_epochs = math.floor((N - (L_epoch - L_hop)) / L_hop)
     if N_epochs < 1:
         N_epochs = 1
 
@@ -52,11 +54,13 @@ def gen_rEEG(data, win_overlap, win_length, win_type, fs, APPLY_LOG_LINEAR_SCALE
             reeg[k] = np.nanmax(x_epoch) - np.nanmin(x_epoch)
     # no need to resample (as per [1])
 
-
     if APPLY_LOG_LINEAR_SCALE:
         ihigh = [idx for idx, val in enumerate(reeg) if val > 50]
         if not ihigh:
-            reeg = [(50*math.log(aa)/math.log(50))if i in ihigh else aa for i, aa in enumerate(reeg)]
+            reeg = [
+                (50 * math.log(aa) / math.log(50)) if i in ihigh else aa
+                for i, aa in enumerate(reeg)
+            ]
 
     return reeg
 
@@ -150,7 +154,7 @@ def rEEG_CV(reeg):
     0.5085
 
     """
-    return np.nanstd(reeg, ddof=1)/np.nanmean(reeg)
+    return np.nanstd(reeg, ddof=1) / np.nanmean(reeg)
 
 
 def rEEG_asymmetry(reeg):
@@ -199,19 +203,18 @@ def main_rEEG(x, Fs, feat_name, params=None):
     """
     if params is None:
         params = NEURAL_parameters.NEURAL_parameters()
-        if 'rEEG' in params:
-            params = params['rEEG']
+        if "rEEG" in params:
+            params = params["rEEG"]
         else:
-            raise ValueError('No default parameters found')
-    else:
-        if 'rEEG' in params:
-            params = params['rEEG']
+            raise ValueError("No default parameters found")
+    elif len(params) == 0:
+        params = NEURAL_parameters.NEURAL_parameters()
+        if "rEEG" in params:
+            params = params["rEEG"]
         else:
-            raise ValueError('No parameters found')
+            raise ValueError("No default parameters found")
 
-
-
-    freq_bands = params['freq_bands']
+    freq_bands = params["freq_bands"]
 
     N_freq_bands = len(freq_bands)
     if N_freq_bands == 0:
@@ -222,18 +225,30 @@ def main_rEEG(x, Fs, feat_name, params=None):
     featx = np.empty(N_freq_bands)
     for n in range(N_freq_bands):
         if not len(freq_bands) == 0:
-            x_filt, dum = utils.filter_butterworth_withnans(x_orig, Fs, freq_bands[n][1], freq_bands[n][0], 5,
-                                                            params['FILTER_REPLACE_ARTEFACTS'])
+            x_filt, dum = utils.filter_butterworth_withnans(
+                x_orig,
+                Fs,
+                freq_bands[n][1],
+                freq_bands[n][0],
+                5,
+                params["FILTER_REPLACE_ARTEFACTS"],
+            )
             x_orig = x.copy()
         else:
             x_filt = x.copy()
 
-        reeg = gen_rEEG(x_filt, params['overlap'], params['L_window'], params['window_type'], Fs,
-                        params['APPLY_LOG_LINEAR_SCALE'])
+        reeg = gen_rEEG(
+            x_filt,
+            params["overlap"],
+            params["L_window"],
+            params["window_type"],
+            Fs,
+            params["APPLY_LOG_LINEAR_SCALE"],
+        )
 
         try:
             featx[n] = eval(feat_name)(reeg)
         except:
-            raise ValueError('Feature function not found: %s' % feat_name)
+            raise ValueError("Feature function not found: %s" % feat_name)
 
     return featx

@@ -1,14 +1,13 @@
 # Author:       Brian Murphy
 # Date started: 30/01/2020
-# Last updated: <17/02/2020 16:45:38 (BrianM)>
+# Last updated: <25/07/2022 16:40:13 (BrianM)>
 
-import utils
+from NEURAL_py_EEG import utils
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from pathlib import Path
-
 
 
 def mat_percentile(x, q):
@@ -24,15 +23,14 @@ def mat_percentile(x, q):
     if n == 0:
         return np.nan
     y = np.sort(x)
-    return np.interp(q, np.linspace(1/(2*n), (2*n-1)/(2*n), n), y)
-
+    return np.interp(q, np.linspace(1 / (2 * n), (2 * n - 1) / (2 * n), n), y)
 
 
 def estimate_IBI_lengths(anno, percentiles_all, Fs):
     """
     Estimate the max./median IBI length
     """
-    min_ibi_interval = Fs/4
+    min_ibi_interval = Fs / 4
     lens_anno = utils.len_cont_zeros(anno)[0]
 
     ishort = np.where(lens_anno < min_ibi_interval)[0]
@@ -45,7 +43,6 @@ def estimate_IBI_lengths(anno, percentiles_all, Fs):
     else:
         pc_anno = np.zeros(1)
     return pc_anno / Fs
-
 
 
 def main_IBI(x, Fs, feat_name):
@@ -85,21 +82,35 @@ def main_IBI(x, Fs, feat_name):
 
     DBplot = 0
 
-    bdetect_path_string = 'Enter path to ->' + 'py_burst_detector-master/py_burst_detector-master/'
+    bdetect_path_string = (
+        "Enter path to ->" + "py_burst_detector-master/py_burst_detector-master/"
+    )
     bdetect_path = Path(bdetect_path_string)
 
-    bdetect_path_exist = os.path.isfile(Path(bdetect_path_string + 'burst_detector/' + 'eeg_burst_detector.py'))
+    bdetect_path_exist = os.path.isfile(
+        Path(bdetect_path_string + "burst_detector/" + "eeg_burst_detector.py")
+    )
     if not bdetect_path_exist:
-        print('\n** ------------ **\n')
-        print('Burst detector not included in path (eeg_burst_detector.py)\n\n')
-        print('If installed, ensure eeg_burst_detector.py and associated files \n')
-        print('are included in the python path.\n')
-        print('To do this, update the bdetect_path with the location of the burst detector.\n')
-        print('(for more on search paths see: ')
-        print(['<a href=https://docs.python.org/3/library/os.path.html>python os path</a>)\n\n'])
-        print('If the burst detector is not installed, download from:\n')
-        print(['<a href=http://otoolej.github.io/code/py_burst_detector/> py burst detector source code </a>\n'])
-        print('** ------------ **\n')
+        print("\n** ------------ **\n")
+        print("Burst detector not included in path (eeg_burst_detector.py)\n\n")
+        print("If installed, ensure eeg_burst_detector.py and associated files \n")
+        print("are included in the python path.\n")
+        print(
+            "To do this, update the bdetect_path with the location of the burst detector.\n"
+        )
+        print("(for more on search paths see: ")
+        print(
+            [
+                "<a href=https://docs.python.org/3/library/os.path.html>python os path</a>)\n\n"
+            ]
+        )
+        print("If the burst detector is not installed, download from:\n")
+        print(
+            [
+                "<a href=http://otoolej.github.io/code/py_burst_detector/> py burst detector source code </a>\n"
+            ]
+        )
+        print("** ------------ **\n")
 
         return np.nan
 
@@ -116,7 +127,7 @@ def main_IBI(x, Fs, feat_name):
         plt.plot(burst_anno)
         plt.ylim((-0.2, 1.2))
 
-    if feat_name == 'IBI_length_max':
+    if feat_name == "IBI_length_max":
         """
         ---------------------------------------------------------------------
         max. (95th percentile) inter-burst interval
@@ -124,7 +135,7 @@ def main_IBI(x, Fs, feat_name):
         """
         return estimate_IBI_lengths(burst_anno, 95, Fs)
 
-    elif feat_name == 'IBI_length_median':
+    elif feat_name == "IBI_length_median":
         """
         ---------------------------------------------------------------------
         median inter-burst interval
@@ -132,7 +143,7 @@ def main_IBI(x, Fs, feat_name):
         """
         return estimate_IBI_lengths(burst_anno, 50, Fs)
 
-    elif feat_name == 'IBI_burst_prc':
+    elif feat_name == "IBI_burst_prc":
         """
         ---------------------------------------------------------------------
         percentage of bursts
@@ -140,7 +151,7 @@ def main_IBI(x, Fs, feat_name):
         """
         return (np.nansum(burst_anno) / burst_anno.size) * 100
 
-    elif feat_name == 'IBI_burst_number':
+    elif feat_name == "IBI_burst_number":
         """
         ---------------------------------------------------------------------
         number of bursts

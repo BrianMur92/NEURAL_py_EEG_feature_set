@@ -1,12 +1,12 @@
 # Author:       Brian Murphy
 # Date started: 30/01/2020
-# Last updated: <17/02/2020 13:02:19 (BrianM)>
+# Last updated: <25/07/2022 16:40:13 (BrianM)>
 
 import pandas as pd
-import utils
+from NEURAL_py_EEG import utils
 import numpy as np
-import NEURAL_parameters
-from connectivity_features import channel_hemispheres
+from NEURAL_py_EEG import NEURAL_parameters
+from NEURAL_py_EEG.connectivity_features import channel_hemispheres
 from scipy import signal
 import mne
 
@@ -39,7 +39,7 @@ def load_edf_EEG_file(file_name, channels_to_look=None):
 
     """
     if channels_to_look is None:
-        channels_to_look = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2', 'T3', 'T4', 'Cz']
+        channels_to_look = ["F3", "F4", "C3", "C4", "O1", "O2", "T3", "T4", "Cz"]
     f = mne.io.read_raw_edf(file_name, preload=True)
     data = f._data
     signal_labels = f.ch_names
@@ -56,7 +56,7 @@ def load_edf_EEG_file(file_name, channels_to_look=None):
             # data_out.insert(loop_index, ch, f.readSignal(loc))
             data_out.insert(loop_index, ch, data[loc, :] * 10 ** 6)
             ch_names.append(ch)
-            tmp = f.info['sfreq']  # [ch, f.getSampleFrequency(loc)]
+            tmp = f.info["sfreq"]  # [ch, f.getSampleFrequency(loc)]
             ch_fs.append(tmp)
             loop_index += 1
 
@@ -64,7 +64,7 @@ def load_edf_EEG_file(file_name, channels_to_look=None):
     return data_out, ch_fs
 
 
-def overlap_epochs(x, Fs, L_window, overlap=50, window_type='rect'):
+def overlap_epochs(x, Fs, L_window, overlap=50, window_type="rect"):
     """
         ---------------------------------------------------------------------
         overlapping epochs in one matrix
@@ -78,12 +78,16 @@ def overlap_epochs(x, Fs, L_window, overlap=50, window_type='rect'):
     :return:
     """
 
-    L_hop, L_epoch, win_epoch = utils.gen_epoch_window(overlap, L_window, window_type, Fs)
+    L_hop, L_epoch, win_epoch = utils.gen_epoch_window(
+        overlap, L_window, window_type, Fs
+    )
     N = len(x)
     N_epochs = int(np.ceil((N - (L_epoch - L_hop)) / L_hop))
     if N_epochs < 1:
         N_epochs = 1
-        print('| WARNING: signal length is less than segment length (L_epoch - L_hop).\n')
+        print(
+            "| WARNING: signal length is less than segment length (L_epoch - L_hop).\n"
+        )
         print('| Adjust "EPOCH_LENGTH" or "EPOCH_OVERLAP" in ')
         print('"NEURAL_parameters.py" file.\n')
 
@@ -107,7 +111,7 @@ def overlap_epochs(x, Fs, L_window, overlap=50, window_type='rect'):
     return x_epochs, x_epochs_inds.astype(int)
 
 
-def art_per_channel(x, Fs, DBverbose, params=None):
+def art_per_channel(x, Fs, DBverbose):
     """
     Remove artefacts on a per-channel basis
 
@@ -116,8 +120,7 @@ def art_per_channel(x, Fs, DBverbose, params=None):
     :param Fs: sampling frequency
     :return: x, data with artefacts set as nan
     """
-    if params is None:
-        params = NEURAL_parameters.NEURAL_parameters()
+    params = NEURAL_parameters.NEURAL_parameters()
 
     # DBverbose = 1
     N = len(x)  # verify / check this
@@ -130,17 +133,19 @@ def art_per_channel(x, Fs, DBverbose, params=None):
     x_channel[np.where(x_channel != 0)] = 1
     irem = np.zeros([N])
     lens, istart, iend = utils.len_cont_zeros(x_channel, 0)
-    ielec = np.array(np.where(lens >= (params['ART_ELEC_CHECK'] * Fs)))[0]
+    ielec = np.array(np.where(lens >= (params["ART_ELEC_CHECK"] * Fs)))[0]
 
     if ielec.size != 0:
         for m in ielec:
-            irun = np.array(range((istart[m] - 1), (iend[m] + 2), 1))  # TODO check this against matlab
+            irun = np.array(
+                range((istart[m] - 1), (iend[m] + 2), 1)
+            )  # TODO check this against matlab
             irun[np.where(irun < 0)] = 0
             irun[np.where(irun > N - 1)] = N - 1
             irem[irun] = 1
             x[irun] = np.nan
     if any(irem == 1):
-        print('continuous row of zeros: %.2f%%\n' % (100 * (np.sum(irem) / N)))
+        print("continuous row of zeros: %.2f%%\n" % (100 * (np.sum(irem) / N)))
     amount_removed[0] = 100 * (np.sum(irem) / N)
 
     x_nofilt = x.copy()
@@ -149,29 +154,33 @@ def art_per_channel(x, Fs, DBverbose, params=None):
     # ---------------------------------------------------------------------
     # 2. high - amplitude artefacts
     # ---------------------------------------------------------------------
-    art_coll = params['ART_TIME_COLLAR'] * Fs
+    art_coll = params["ART_TIME_COLLAR"] * Fs
     irem = np.zeros(N)
 
     x_hilbert = np.abs(signal.hilbert(x_filt))
 
-    thres_upper = params['ART_HIGH_VOLT']
+    thres_upper = params["ART_HIGH_VOLT"]
     ihigh = np.array(np.where(x_hilbert > thres_upper))[0]
 
     if ihigh.size != 0:
         for p in range(len(ihigh)):
-            irun = np.array(range((ihigh[p] - int(art_coll)), (ihigh[p] + int(art_coll) + 1), 1))
+            irun = np.array(
+                range((ihigh[p] - int(art_coll)), (ihigh[p] + int(art_coll) + 1), 1)
+            )
             irun[np.where(irun < 0)] = 0
             irun[np.where(irun > N - 1)] = N - 1
             irem[irun] = 1
     x[irem == 1] = np.nan
     if any(irem == 1) and DBverbose:
-        print('length of high-amplitude artefacts: %.2f%%\n' % (100 * (np.sum(irem) / N)))
+        print(
+            "length of high-amplitude artefacts: %.2f%%\n" % (100 * (np.sum(irem) / N))
+        )
     amount_removed[1] = 100 * (np.sum(irem) / N)
 
     # ---------------------------------------------------------------------
     # 3. continuous constant values(i.e.artefacts)
     # ---------------------------------------------------------------------
-    art_coll = params['ART_DIFF_TIME_COLLAR'] * Fs
+    art_coll = params["ART_DIFF_TIME_COLLAR"] * Fs
     irem = np.zeros(N)
 
     x_diff_all = np.concatenate((np.diff(x), [0]))
@@ -180,40 +189,44 @@ def art_per_channel(x, Fs, DBverbose, params=None):
     lens, istart, iend = utils.len_cont_zeros(x_diff, 0)
 
     # if exactly constant for longer than.then remove:
-    ielec = np.array(np.where(lens > (params['ART_DIFF_MIN_TIME'] * Fs)))[0]
+    ielec = np.array(np.where(lens > (params["ART_DIFF_MIN_TIME"] * Fs)))[0]
 
     if ielec.size != 0:
         for m in ielec:
-            irun = np.array(range((istart[m] - int(art_coll)), (iend[m] + int(art_coll) + 1), 1))
+            irun = np.array(
+                range((istart[m] - int(art_coll)), (iend[m] + int(art_coll) + 1), 1)
+            )
             irun[np.where(irun < 0)] = 0
             irun[np.where(irun > N - 1)] = N - 1
             irem[irun] = 1
             x[irun] = np.nan
     if any(irem == 1):
-        print('continuous row of constant values: %.2f%%\n' % (100 * (np.sum(irem) / N)))
+        print(
+            "continuous row of constant values: %.2f%%\n" % (100 * (np.sum(irem) / N))
+        )
     amount_removed[2] = 100 * (np.sum(irem) / N)
 
     # ---------------------------------------------------------------------
     # 4. sudden jumps in amplitudes or constant values(i.e.artefacts)
     # ---------------------------------------------------------------------
-    art_coll = params['ART_DIFF_TIME_COLLAR'] * Fs
+    art_coll = params["ART_DIFF_TIME_COLLAR"] * Fs
     irem = np.zeros(N)
     x_diff = x_diff_all.copy()
 
-    ihigh = np.array(np.where(np.abs(x_diff) > params['ART_DIFF_VOLT']))[0]
+    ihigh = np.array(np.where(np.abs(x_diff) > params["ART_DIFF_VOLT"]))[0]
     if ihigh.size != 0:
         for p in range(len(ihigh)):
-            irun = np.array(range((ihigh[p] - int(art_coll)), (ihigh[p] + int(art_coll) + 1), 1))
+            irun = np.array(
+                range((ihigh[p] - int(art_coll)), (ihigh[p] + int(art_coll) + 1), 1)
+            )
             irun[np.where(irun < 0)] = 0
             irun[np.where(irun > N - 1)] = N - 1
             irem[irun] = 1
 
     x[irem == 1] = np.nan
     if any(irem == 1) and DBverbose:
-        print('length of sudden-jump artefacts: %.2f%%\n' % (100 * (np.sum(irem) / N)))
+        print("length of sudden-jump artefacts: %.2f%%\n" % (100 * (np.sum(irem) / N)))
     amount_removed[3] = 100 * (np.sum(irem) / N)
-
-
 
     # before filtering, but should be eliminated anyway
     x[inans] = np.nan
@@ -225,7 +238,7 @@ def art_per_channel(x, Fs, DBverbose, params=None):
     return x, amount_removed
 
 
-def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
+def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref):
     """
     remove_artefacts: simple procedure to remove artefacts
 
@@ -271,8 +284,7 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
         eeg_art = preprocessing_EEG.remove_artefacts(data_st['eeg_data'].copy(), data_st['ch_labels'], data_st['Fs'],
                                          data_st['eeg_data_ref'], data_st['ch_labels_ref'])
     """
-    if params is None:
-        params = NEURAL_parameters.NEURAL_parameters()
+    params = NEURAL_parameters.NEURAL_parameters()
     DBverbose = 1
 
     N, N_channels = data.shape
@@ -286,15 +298,18 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
     if not data_ref.empty:
         x_filt = np.zeros([data_ref.shape[1], data_ref.shape[0]])
         for ch in range(data_ref.shape[1]):
-            x_filt[ch, :], dum = utils.filter_butterworth_withnans(data_ref[channel_names_ref[ch]].to_numpy(), Fs,
-                                                                   20, 0.5, 5)
+            x_filt[ch, :], dum = utils.filter_butterworth_withnans(
+                data_ref[channel_names_ref[ch]].to_numpy(), Fs, 20, 0.5, 5
+            )
 
         r = np.corrcoef(x_filt)
         np.fill_diagonal(r, np.nan)
         r_channel = np.nanmean(r, axis=0)
         del x_filt
 
-        ilow = np.array(np.where(np.abs(r_channel) < params['ART_REF_LOW_CORR'])).astype(int)[0]
+        ilow = np.array(
+            np.where(np.abs(r_channel) < params["ART_REF_LOW_CORR"])
+        ).astype(int)[0]
 
         if ilow.size != 0:
             nn = 1
@@ -304,7 +319,10 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
                 itmp = [i for i, x in enumerate(ch_labels) if ch_find in x]
                 irem_channel = np.append(irem_channel, itmp)
                 nn += 1
-            print(':: remove channel (low ref. correlation): %s\n' % np.array(ch_labels)[irem_channel.astype(int)])
+            print(
+                ":: remove channel (low ref. correlation): %s\n"
+                % np.array(ch_labels)[irem_channel.astype(int)]
+            )
 
         # if DBverbose:
         # print(r_channel)
@@ -328,8 +346,9 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
 
             x_filt = np.zeros([data_ref.shape[1], data_ref.shape[0]])
             for ch in range(N_channels):
-                x_filt[ch, :], dum = utils.filter_butterworth_withnans(data[ch_labels[ichannels[ch]]].to_numpy(), Fs,
-                                                                       20, 0.5, 5)
+                x_filt[ch, :], dum = utils.filter_butterworth_withnans(
+                    data[ch_labels[ichannels[ch]]].to_numpy(), Fs, 20, 0.5, 5
+                )
 
             A = []  # to suppress warning
             for n in range(N_channels):
@@ -352,7 +371,9 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
             ishort = np.array(ichannels[ishort])
 
             if ishort.size != 0:
-                print(':: remove channel (electrode coupling): %s\n' % ch_labels[ishort])
+                print(
+                    ":: remove channel (electrode coupling): %s\n" % ch_labels[ishort]
+                )
                 data[ch_labels[ishort][0]] = np.nan
                 irem_channel = np.append(irem_channel, ishort[0])
 
@@ -370,7 +391,9 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
     ct = 0
 
     for n in ichannels:
-        data[ch_labels[n]], tmpp = art_per_channel(data[ch_labels[n]].to_numpy(), Fs, DBverbose, params=params)
+        data[ch_labels[n]], tmpp = art_per_channel(
+            data[ch_labels[n]].to_numpy(), Fs, DBverbose
+        )
         if ct == 0:
             amount_removed[ct, :] = tmpp
         else:
@@ -388,12 +411,12 @@ def remove_artefacts(data, ch_labels, Fs, data_ref, ch_labels_ref, params=None):
     if irem_channel.shape[0] != 0:
         out.append(np.unique(ch_labels[irem_channel.astype(int)]))
     else:
-        out.append('None removed')
+        out.append("None removed")
 
     return data, out
 
 
-def LPF_zero_phase(pd_data, Fs, params=None):
+def LPF_zero_phase(pd_data, Fs):
     """
 
     (pd) -> pd
@@ -404,9 +427,8 @@ def LPF_zero_phase(pd_data, Fs, params=None):
     data
 
     """
-    if params is None:
-        params = NEURAL_parameters.NEURAL_parameters()
-    lp = params['LP_fc']
+    params = NEURAL_parameters.NEURAL_parameters()
+    lp = params["LP_fc"]
 
     cols = list(pd_data.columns)
     for i in range(len(cols)):
@@ -442,7 +464,6 @@ def signal_downsample(pd_data, Fs, Fs_new):
     pd_data_downsample = pd.DataFrame()
     loop_index = 0
 
-
     if isint(Fs / Fs_new):
         idec = list(range(0, len(pd_data), round(Fs / Fs_new)))
 
@@ -452,10 +473,13 @@ def signal_downsample(pd_data, Fs, Fs_new):
             pd_data_downsample.insert(loop_index, cols[i], eeg_data)
             loop_index += 1
     else:
-        size_resampled = signal.resample_poly(np.ones(len(pd_data)), round(len(pd_data) / (Fs / Fs_new)),
-                                              len(pd_data)).size
+        size_resampled = signal.resample_poly(
+            np.ones(len(pd_data)), round(len(pd_data) / (Fs / Fs_new)), len(pd_data)
+        ).size
 
-        for i in range(len(cols)):  # To find the size of resampled array so rows of all nans are sorted
+        for i in range(
+            len(cols)
+        ):  # To find the size of resampled array so rows of all nans are sorted
             data = np.array(pd_data[cols[i]])
             if sum(np.isnan(data)) == len(data):
                 down_eeg_data = np.ones(size_resampled)
@@ -464,14 +488,16 @@ def signal_downsample(pd_data, Fs, Fs_new):
                 loop_index += 1
                 continue
 
-            down_eeg_data = signal.resample_poly(data, round(len(data) / (Fs / Fs_new)), len(data))
+            down_eeg_data = signal.resample_poly(
+                data, round(len(data) / (Fs / Fs_new)), len(data)
+            )
             pd_data_downsample.insert(loop_index, cols[i], down_eeg_data)
             loop_index += 1
 
     return pd_data_downsample, Fs_new
 
 
-def main_preprocessing(file, save_converted=None, save=0, Fs_new=64, params=None):
+def main_preprocessing(file, save_converted=None, save=0, Fs_new=64):
     """
     This function is used to  a) read in EEG from .edf files
                               b) remove artefacts
@@ -485,16 +511,25 @@ def main_preprocessing(file, save_converted=None, save=0, Fs_new=64, params=None
 
     montage_data, dum = utils.set_bi_montage(data, Fs)
 
-    clean_data, amount_removed = remove_artefacts(montage_data.copy(), np.array(list(montage_data.columns)), Fs, data,
-                                                  np.array(list(data.columns)), params=params)
+    clean_data, amount_removed = remove_artefacts(
+        montage_data.copy(),
+        np.array(list(montage_data.columns)),
+        Fs,
+        data,
+        np.array(list(data.columns)),
+    )
 
-    filtered_data = LPF_zero_phase(clean_data.copy(), Fs, params=params)
+    filtered_data = LPF_zero_phase(clean_data.copy(), Fs)
 
     down_sampled_data, Fs = signal_downsample(filtered_data.copy(), Fs, Fs_new)
 
-    packaged_data = {'eeg_data': down_sampled_data, 'Fs': Fs, 'ch_labels': list(down_sampled_data.columns)}
+    packaged_data = {
+        "eeg_data": down_sampled_data,
+        "Fs": Fs,
+        "ch_labels": list(down_sampled_data.columns),
+    }
 
     if save and not not save_converted:
-        utils.save_pd_as_file(down_sampled_data, save_converted + 'down', Fs)
+        utils.save_pd_as_file(down_sampled_data, save_converted + "down", Fs)
 
     return packaged_data, amount_removed

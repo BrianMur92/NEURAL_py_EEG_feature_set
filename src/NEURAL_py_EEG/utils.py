@@ -1,6 +1,6 @@
 # Author:       Brian Murphy
 # Date started: 30/01/2020
-# Last updated: <17/02/2020 12:40:13 (BrianM)>
+# Last updated: <25/07/2022 16:40:13 (BrianM)>
 
 import math
 import numpy as np
@@ -12,7 +12,7 @@ import warnings
 import matplotlib.pyplot as plt
 import pandas as pd
 import pyedflib
-import mfiltfilt
+from NEURAL_py_EEG import mfiltfilt
 
 
 # noinspection SpellCheckingInspection
@@ -45,24 +45,24 @@ def get_window(win_length, win_type, Npad=0):
 
     win_type = win_type.lower()
 
-    if win_type == 'hamm' or win_type == 'hamming':
+    if win_type == "hamm" or win_type == "hamming":
         win = np.hamming(win_length)
-    elif win_type == 'hann' or win_type == 'hanning':
+    elif win_type == "hann" or win_type == "hanning":
         win = np.hanning(win_length)
-    elif win_type == 'rect' or win_type == 'rectangular':
+    elif win_type == "rect" or win_type == "rectangular":
         win = np.ones(win_length)
-    elif win_type == 'black' or win_type == 'blackman':
+    elif win_type == "black" or win_type == "blackman":
         win = np.blackman(win_length)
-    elif win_type == 'blackmanharris':
+    elif win_type == "blackmanharris":
         win = signal.blackmanharris(win_length)
-    elif win_type == 'kaiser':
+    elif win_type == "kaiser":
         win = np.kaiser(win_length, 5)
-    elif win_type == 'tuke' or win_type == 'tukey':
+    elif win_type == "tuke" or win_type == "tukey":
         win = signal.tukey(win_length)
-    elif win_type == 'bart' or win_type == 'bartlett':
+    elif win_type == "bart" or win_type == "bartlett":
         win = signal.bartlett(win_length)
     else:
-        raise ValueError('Name of window function incorrect. Name: %s' % win_type)
+        raise ValueError("Name of window function incorrect. Name: %s" % win_type)
 
     win = np.roll(win, math.ceil(len(win) / 2))
 
@@ -93,7 +93,7 @@ def pad_win(w, Npad):
     N = len(w)
     Nh = np.floor(N / 2).astype(int)
     if Npad < N:
-        raise ValueError('Npad is less than N')
+        raise ValueError("Npad is less than N")
 
     # Trivial case
     if N == Npad:
@@ -174,7 +174,7 @@ def gen_epoch_window(L_overlap, L_epoch, win_type, Fs, GEN_PSD=None):
         win_epoch = get_window(L_epoch, win_type)
         win_epoch = np.roll(win_epoch, math.floor(len(win_epoch) / 2))
     else:
-        ''' ---------------------------------------------------------------------
+        """ ---------------------------------------------------------------------
         otherwise, if using an overlap-and-add method, then for window w[n]
         âˆ‘â‚˜ w[n - mR] = 1 over all n (R = L_hop )
         
@@ -187,10 +187,10 @@ def gen_epoch_window(L_overlap, L_epoch, win_type, Fs, GEN_PSD=None):
         there are some restrictions on this:
         e.g. for Hamming window, L_hop = (L_epoch-1)/2, (L_epoch-1)/4, ... 
         ---------------------------------------------------------------------
-        '''
-        if win_type == 'hamm':
+        """
+        if win_type == "hamm":
             L_hop = (L_epoch - 1) * L_hop
-        elif win_type == 'hann':
+        elif win_type == "hann":
             L_hop = (L_epoch + 1) * L_hop
         else:
             L_hop = L_epoch * L_hop
@@ -199,7 +199,7 @@ def gen_epoch_window(L_overlap, L_epoch, win_type, Fs, GEN_PSD=None):
         win_epoch = get_window(L_epoch, win_type)
         win_epoch = np.roll(win_epoch, math.floor(len(win_epoch) / 2))
 
-        if win_type == 'hamm' and L_epoch // 2 == 1:
+        if win_type == "hamm" and L_epoch // 2 == 1:
             win_epoch[0] = win_epoch[0] / 2
             win_epoch[-1] = win_epoch[-1] / 2
 
@@ -238,23 +238,38 @@ def gen_test_EEGdata(dur, Fs, include_bipolar=0, discont_activity=0):
     """
     N = int(np.floor(dur * Fs))
 
-    '''---------------------------------------------------------------------
+    """---------------------------------------------------------------------
     generate white Gaussian noise and filter with moving average filter
     (referential montage has common signal)
-    ---------------------------------------------------------------------'''
+    ---------------------------------------------------------------------"""
 
     L_ma = Fs / 4
     L_ma_noise = np.ceil(Fs / 16)
     N_channels = 9
 
-    eeg_common = 5 * signal.lfilter([1 / L_ma for a in range(int(L_ma))], 1, np.random.randn(int(N)))
+    eeg_common = 5 * signal.lfilter(
+        [1 / L_ma for a in range(int(L_ma))], 1, np.random.randn(int(N))
+    )
 
-    eeg_data_ref = signal.lfilter([1 / L_ma for a in range(int(L_ma))], 1, np.random.randn(N_channels, N)) + \
-                   (signal.lfilter([1 / L_ma_noise for a in range(int(L_ma_noise))], 1,
-                                   np.random.randn(N_channels, N))) / 100 + eeg_common
+    eeg_data_ref = (
+        signal.lfilter(
+            [1 / L_ma for a in range(int(L_ma))], 1, np.random.randn(N_channels, N)
+        )
+        + (
+            signal.lfilter(
+                [1 / L_ma_noise for a in range(int(L_ma_noise))],
+                1,
+                np.random.randn(N_channels, N),
+            )
+        )
+        / 100
+        + eeg_common
+    )
 
     if discont_activity:
-        ibursts = np.array([random.randint(0, N - 1) for a in range(int(dur / 100) * Fs)])
+        ibursts = np.array(
+            [random.randint(0, N - 1) for a in range(int(dur / 100) * Fs)]
+        )
         amps = np.abs(1 + np.random.uniform(0, 1, [1, int(dur / 100) * Fs]))
 
         bursts = np.zeros([1, N])
@@ -268,19 +283,31 @@ def gen_test_EEGdata(dur, Fs, include_bipolar=0, discont_activity=0):
     else:
         eeg_data_ref = eeg_data_ref * 50
 
-    ch_labels_bi = [['F4', 'C4'], ['F3', 'C3'], ['C4', 'T4'], ['C3', 'T3'], ['C4', 'Cz'], ['Cz', 'C3'], ['C4', 'O2']
-        , ['C3', 'O1']]
+    ch_labels_bi = [
+        ["F4", "C4"],
+        ["F3", "C3"],
+        ["C4", "T4"],
+        ["C3", "T3"],
+        ["C4", "Cz"],
+        ["Cz", "C3"],
+        ["C4", "O2"],
+        ["C3", "O1"],
+    ]
 
-    ch_labels_ref = ['C3', 'C4', 'Cz', 'F3', 'F4', 'O1', 'O2', 'T3', 'T4']
+    ch_labels_ref = ["C3", "C4", "Cz", "F3", "F4", "O1", "O2", "T3", "T4"]
 
     eeg_data_ref = pd.DataFrame(data=np.transpose(eeg_data_ref), columns=ch_labels_ref)
-    packaged_data = {'eeg_data_ref': eeg_data_ref, 'Fs': Fs, 'ch_labels_ref': list(eeg_data_ref.columns)}
+    packaged_data = {
+        "eeg_data_ref": eeg_data_ref,
+        "Fs": Fs,
+        "ch_labels_ref": list(eeg_data_ref.columns),
+    }
 
     if include_bipolar:
-        packaged_data['ch_labels_bi'] = ch_labels_bi
+        packaged_data["ch_labels_bi"] = ch_labels_bi
         eeg_data, dum = set_bi_montage(eeg_data_ref, Fs, ch_labels_bi)
-        packaged_data['eeg_data'] = eeg_data
-        packaged_data['ch_labels'] = list(eeg_data.columns)
+        packaged_data["eeg_data"] = eeg_data
+        packaged_data["ch_labels"] = list(eeg_data.columns)
 
     return packaged_data
 
@@ -314,8 +341,16 @@ def set_bi_montage(sigs, Fs, bi_mont=None):
         x_bi, ch_labels_bi = utils.set_bi_montage(x_ref, ch_labels_ref, BI_MONT)
     """
     if bi_mont is None:
-        bi_mont = [['C3', 'O1'], ['C4', 'O2'], ['Cz', 'C3'], ['C4', 'Cz'], ['C3', 'T3'], ['C4', 'T4'], ['F3', 'C3'],
-                   ['F4', 'C4']]
+        bi_mont = [
+            ["C3", "O1"],
+            ["C4", "O2"],
+            ["Cz", "C3"],
+            ["C4", "Cz"],
+            ["C3", "T3"],
+            ["C4", "T4"],
+            ["F3", "C3"],
+            ["F4", "C4"],
+        ]
 
     channel_names = list(sigs.columns)
     montage_data = pd.DataFrame()
@@ -324,16 +359,20 @@ def set_bi_montage(sigs, Fs, bi_mont=None):
 
     for pair in range(len(bi_mont)):
         if bi_mont[pair][0] in channel_names and bi_mont[pair][1] in channel_names:
-            tmp = bi_mont[pair][0] + '_' + bi_mont[pair][1]
+            tmp = bi_mont[pair][0] + "_" + bi_mont[pair][1]
             montage_channels.append(tmp)
             tmp_data = sigs[bi_mont[pair][0]] - sigs[bi_mont[pair][1]]
-            montage_data.insert(loop_index, bi_mont[pair][0] + '_' + bi_mont[pair][1], tmp_data)
+            montage_data.insert(
+                loop_index, bi_mont[pair][0] + "_" + bi_mont[pair][1], tmp_data
+            )
             loop_index += 1
 
     return montage_data, montage_channels
 
 
-def filter_zerophase(x, Fs=1, LP_fc=-1, HP_fc=-1, L_filt=0, win_type='hamming', DBplot=0):
+def filter_zerophase(
+    x, Fs=1, LP_fc=-1, HP_fc=-1, L_filt=0, win_type="hamming", DBplot=0
+):
     """
     filter_zerophase: Simple implementation of zero-phase FIR filter using 'filtfilt'
 
@@ -403,7 +442,7 @@ def filter_zerophase(x, Fs=1, LP_fc=-1, HP_fc=-1, L_filt=0, win_type='hamming', 
         b = signal.firwin(L_filt - 1, filt_passband, window=win_type)
 
     else:
-        raise ValueError('Need to specify cutoff frequency')
+        raise ValueError("Need to specify cutoff frequency")
 
     # Do the filtering
 
@@ -430,26 +469,28 @@ def gen_window(win_type, L):
     # ---------------------------------------------------------------------
     win_type = win_type.lower()
 
-    if win_type == 'hamm' or win_type == 'hamming':
+    if win_type == "hamm" or win_type == "hamming":
         w = np.hamming(L)
-    elif win_type == 'hann' or win_type == 'hanning':
+    elif win_type == "hann" or win_type == "hanning":
         w = np.hanning(L)
-    elif win_type == 'rect' or win_type == 'rectangular':
+    elif win_type == "rect" or win_type == "rectangular":
         w = np.ones(L)
-    elif win_type == 'black' or win_type == 'blackman':
+    elif win_type == "black" or win_type == "blackman":
         w = np.blackman(L)
-    elif win_type == 'blackmanharris':
+    elif win_type == "blackmanharris":
         w = signal.blackmanharris(L)
-    elif win_type == 'kaiser':
+    elif win_type == "kaiser":
         w = np.kaiser(L, 5)
     else:
-        raise ValueError('Name of window function incorrect. Name: %s' % win_type)
+        raise ValueError("Name of window function incorrect. Name: %s" % win_type)
 
     return w
 
 
 # noinspection SpellCheckingInspection
-def filter_butterworth_withnans(x, Fs, F3db_lowpass, F3db_highpass, order, FILTER_REPLACE_ARTEFACTS='linear_interp'):
+def filter_butterworth_withnans(
+    x, Fs, F3db_lowpass, F3db_highpass, order, FILTER_REPLACE_ARTEFACTS="linear_interp"
+):
     """
     Syntax: y, inans = filter_butterworth_withnans(x, Fs, F3db_lowpass, F3db_highpass, order, FILTER_REPLACE_ARTEFACTS)
 
@@ -490,9 +531,9 @@ def filter_butterworth_withnans(x, Fs, F3db_lowpass, F3db_highpass, order, FILTE
     inans = np.array([])
 
     if not F3db_highpass:
-        b, a = signal.butter(order, F3db_lowpass / (Fs / 2), 'lowpass')
+        b, a = signal.butter(order, F3db_lowpass / (Fs / 2), "lowpass")
     elif not F3db_lowpass:
-        b, a = signal.butter(order, F3db_highpass / (Fs / 2), 'highpass')
+        b, a = signal.butter(order, F3db_highpass / (Fs / 2), "highpass")
     else:
         if isinstance(order, list):
             order_low = order[0]
@@ -501,27 +542,34 @@ def filter_butterworth_withnans(x, Fs, F3db_lowpass, F3db_highpass, order, FILTE
             order_low = order
             order_high = order
 
-        y, isnans_low = filter_butterworth_withnans(x, Fs, F3db_lowpass, [], order_low, FILTER_REPLACE_ARTEFACTS)
-        y, isnans_high = filter_butterworth_withnans(y, Fs, [], F3db_highpass, order_high, FILTER_REPLACE_ARTEFACTS)
+        y, isnans_low = filter_butterworth_withnans(
+            x, Fs, F3db_lowpass, [], order_low, FILTER_REPLACE_ARTEFACTS
+        )
+        y, isnans_high = filter_butterworth_withnans(
+            y, Fs, [], F3db_highpass, order_high, FILTER_REPLACE_ARTEFACTS
+        )
         inans = np.unique(np.concatenate([isnans_low, isnans_high]))
         return y, inans
 
     # remove NaNs and replace with ?
     inans = np.array(np.argwhere(np.isnan(x)))
     if inans.size != 0:
-        if FILTER_REPLACE_ARTEFACTS == 'zeros':
+        if FILTER_REPLACE_ARTEFACTS == "zeros":
             x[inans] = 0
-        elif FILTER_REPLACE_ARTEFACTS == 'linear_interp':
+        elif FILTER_REPLACE_ARTEFACTS == "linear_interp":
             x = replace_start_ends_NaNs_with_zeros(x)
-            x, dum = naninterp(x, 'linear')
-        elif FILTER_REPLACE_ARTEFACTS == 'cubic_interp' or FILTER_REPLACE_ARTEFACTS == 'nans':
+            x, dum = naninterp(x, "linear")
+        elif (
+            FILTER_REPLACE_ARTEFACTS == "cubic_interp"
+            or FILTER_REPLACE_ARTEFACTS == "nans"
+        ):
             x = replace_start_ends_NaNs_with_zeros(x.copy())
-            x, dum = naninterp(x.copy(), 'pchip')
+            x, dum = naninterp(x.copy(), "pchip")
 
     y = mfiltfilt.mat_filtfilt(np.array(b), np.array(a), x)
 
     # special case if nans
-    if FILTER_REPLACE_ARTEFACTS.lower() == 'nans':
+    if FILTER_REPLACE_ARTEFACTS.lower() == "nans":
         if inans.size != 0:
             y[inans] = np.nan
 
@@ -539,14 +587,14 @@ def replace_start_ends_NaNs_with_zeros(x):
     iend = np.argwhere(~np.isnan(x))[-1][0]
 
     if istart.size > 0 and istart > 0:
-        x[0:istart + 1] = 0
+        x[0 : istart + 1] = 0
     if iend.size > 0 and iend < N - 1:
-        x[iend + 1:N + 1] = 0
+        x[iend + 1 : N + 1] = 0
 
     return x
 
 
-def naninterp(X, method='linear'):
+def naninterp(X, method="linear"):
     """
     ---------------------------------------------------------------------
      fill 'gaps' in data (marked by NaN) by interpolating
@@ -563,20 +611,24 @@ def naninterp(X, method='linear'):
             X[inan] = X[inan + 1]
     else:
         try:
-            if method != 'pchip':
-                set_interp = interp1d(np.transpose(np.argwhere(~np.isnan(X)))[0],
-                                      np.transpose(X[np.argwhere(~np.isnan(X))])[0], kind=method)
+            if method != "pchip":
+                set_interp = interp1d(
+                    np.transpose(np.argwhere(~np.isnan(X)))[0],
+                    np.transpose(X[np.argwhere(~np.isnan(X))])[0],
+                    kind=method,
+                )
                 X[inan] = set_interp(inan)
             else:
-                set_interp = PchipInterpolator(np.transpose(np.argwhere(~np.isnan(X)))[0],
-                                               np.transpose(X[np.argwhere(~np.isnan(X))])[0], extrapolate=False)
+                set_interp = PchipInterpolator(
+                    np.transpose(np.argwhere(~np.isnan(X)))[0],
+                    np.transpose(X[np.argwhere(~np.isnan(X))])[0],
+                    extrapolate=False,
+                )
                 X[inan] = set_interp(inan)
 
         except:
-            raise ValueError('linear interpolation with NaNs')
+            raise ValueError("linear interpolation with NaNs")
     return X, inan
-
-
 
 
 def len_cont_zeros(x, const=0):
@@ -620,15 +672,17 @@ def len_cont_zeros(x, const=0):
     y = (y == 0).astype(float)
     y[nan_loc] = 0
     iedge = np.diff(np.concatenate(([0], y, [0])))
-    istart = np.array(np.where(iedge == 1))[0]  # Row zero only - input array should be 1d
+    istart = np.array(np.where(iedge == 1))[
+        0
+    ]  # Row zero only - input array should be 1d
     iend = np.subtract(np.where(iedge == -1), 1)[0]
     lens = np.array([iend - istart])[0]
 
     if DBplot:
         plt.figure(100)
         plt.plot(x)
-        plt.plot(istart, np.array(x[istart]), marker='x')
-        plt.plot(iend, np.array(x[iend]), marker='o', markerfacecolor='none')
+        plt.plot(istart, np.array(x[istart]), marker="x")
+        plt.plot(iend, np.array(x[iend]), marker="o", markerfacecolor="none")
 
     return np.array(lens), istart, iend
 
@@ -643,13 +697,13 @@ def save_pd_as_file(data_to_save, file_name, Fs=None):
 
     """
     if Fs is not None:
-        file_name = file_name + '_Fs_' + str(Fs) + '.csv'
+        file_name = file_name + "_Fs_" + str(Fs) + ".csv"
     else:
-        file_name = file_name + '.csv'
+        file_name = file_name + ".csv"
     if isinstance(data_to_save, pd.DataFrame):
         data_to_save.to_csv(file_name, index=False)
     else:
-        raise ValueError('Data needs to be pandas DataFrame to be saved!')
+        raise ValueError("Data needs to be pandas DataFrame to be saved!")
 
 
 def save_pd_as_edf(data, file_save_name, original_edf_file=None, Fs=250):
@@ -679,11 +733,11 @@ def save_pd_as_edf(data, file_save_name, original_edf_file=None, Fs=250):
           to digital values using the physical and digital maximum and minimum values (hardcoded below).
           The general shape should stay the same.
     """
-    if file_save_name[-4:] != '.edf':
-        file_save_name = file_save_name + '.edf'
+    if file_save_name[-4:] != ".edf":
+        file_save_name = file_save_name + ".edf"
 
-    if original_edf_file is not None and original_edf_file[-4:] != '.edf':
-        original_edf_file = original_edf_file + '.edf'
+    if original_edf_file is not None and original_edf_file[-4:] != ".edf":
+        original_edf_file = original_edf_file + ".edf"
 
     channel_info = []
     data_list = []
@@ -691,20 +745,20 @@ def save_pd_as_edf(data, file_save_name, original_edf_file=None, Fs=250):
 
     if original_edf_file is not None:
         f = pyedflib.EdfReader(original_edf_file)
-        loc = f.getSignalLabels().index('F4')
+        loc = f.getSignalLabels().index("F4")
         channels = list(data.columns)
         for ch in channels:
             ch_dict = dict()
 
-            ch_dict['physical_min'] = f.getPhysicalMinimum(loc)
-            ch_dict['physical_max'] = f.getPhysicalMaximum(loc)
-            ch_dict['digital_min'] = f.getDigitalMinimum(loc)
-            ch_dict['digital_max'] = f.getDigitalMaximum(loc)
-            ch_dict['dimension'] = f.getPhysicalDimension(loc)
-            ch_dict['sample_rate'] = f.getSampleFrequency(loc)
-            ch_dict['label'] = ch
-            ch_dict['transducer'] = f.getTransducer(loc)
-            ch_dict['prefilter'] = f.getPrefilter(loc)
+            ch_dict["physical_min"] = f.getPhysicalMinimum(loc)
+            ch_dict["physical_max"] = f.getPhysicalMaximum(loc)
+            ch_dict["digital_min"] = f.getDigitalMinimum(loc)
+            ch_dict["digital_max"] = f.getDigitalMaximum(loc)
+            ch_dict["dimension"] = f.getPhysicalDimension(loc)
+            ch_dict["sample_rate"] = f.getSampleFrequency(loc)
+            ch_dict["label"] = ch
+            ch_dict["transducer"] = f.getTransducer(loc)
+            ch_dict["prefilter"] = f.getPrefilter(loc)
 
             samples_in_file.append(data.shape[0])
             x = data[ch].to_numpy()
@@ -715,15 +769,15 @@ def save_pd_as_edf(data, file_save_name, original_edf_file=None, Fs=250):
         channels = list(data.columns)
         for ch in channels:
             ch_dict = dict()
-            ch_dict['physical_min'] = -5482.288
-            ch_dict['physical_max'] = 5482.288
-            ch_dict['digital_min'] = -32767
-            ch_dict['digital_max'] = 32767
-            ch_dict['dimension'] = 'uV'
-            ch_dict['sample_rate'] = Fs
-            ch_dict['label'] = ch
-            ch_dict['transducer'] = ''
-            ch_dict['prefilter'] = ''
+            ch_dict["physical_min"] = -5482.288
+            ch_dict["physical_max"] = 5482.288
+            ch_dict["digital_min"] = -32767
+            ch_dict["digital_max"] = 32767
+            ch_dict["dimension"] = "uV"
+            ch_dict["sample_rate"] = Fs
+            ch_dict["label"] = ch
+            ch_dict["transducer"] = ""
+            ch_dict["prefilter"] = ""
 
             samples_in_file.append(data.shape[0])
             x = data[ch].to_numpy()
@@ -731,7 +785,9 @@ def save_pd_as_edf(data, file_save_name, original_edf_file=None, Fs=250):
             data_list.append(x)
             channel_info.append(ch_dict)
 
-    w = pyedflib.EdfWriter(file_save_name, len(list(data.columns)), file_type=pyedflib.FILETYPE_EDFPLUS)
+    w = pyedflib.EdfWriter(
+        file_save_name, len(list(data.columns)), file_type=pyedflib.FILETYPE_EDFPLUS
+    )
     w.setSignalHeaders(channel_info)
     w.writeSamples(data_list)
     w.close()

@@ -1,14 +1,14 @@
 # Author:       Brian Murphy
 # Date started: 30/01/2020
-# Last updated: <17/02/2020 13:04:41 (BrianM)>
+# Last updated: <25/07/2022 16:40:13 (BrianM)>
 
 import numpy as np
-import spectral_features
+from NEURAL_py_EEG import spectral_features
 import warnings
-import utils
+from NEURAL_py_EEG import utils
 from scipy import signal
 from scipy import stats
-import NEURAL_parameters
+from NEURAL_py_EEG import NEURAL_parameters
 import matplotlib as plt
 
 
@@ -23,7 +23,7 @@ def mat_percentile(x, q):
     x = np.delete(x, np.where(np.isnan(x))[0])
     n = len(x)
     y = np.sort(x)
-    return np.interp(q, np.linspace(1/(2*n), (2*n-1)/(2*n), n), y)
+    return np.interp(q, np.linspace(1 / (2 * n), (2 * n - 1) / (2 * n), n), y)
 
 
 def gen_cross_spectrum(x, y, Fs, param_st):
@@ -43,56 +43,59 @@ def gen_cross_spectrum(x, y, Fs, param_st):
     Example:
 
     """
-    L_window = param_st['L_window']
-    window_type = param_st['window_type']
-    overlap = param_st['overlap']
+    L_window = param_st["L_window"]
+    window_type = param_st["window_type"]
+    overlap = param_st["overlap"]
     # freq_bands = param_st['freq_bands']
-    spec_method = param_st['method']
+    spec_method = param_st["method"]
 
     # remove nans
     x[np.isnan(x)] = []
-    if spec_method.lower() == 'bartlett-psd':
+    if spec_method.lower() == "bartlett-psd":
         # ---------------------------------------------------------------------
         # Bartlett PSD: same as Welch with 0 % overlap and rectangular window
         # ---------------------------------------------------------------------
-        window_type = 'rect'
+        window_type = "rect"
         overlap = 0
 
-        spec_method = 'psd'
+        spec_method = "psd"
 
     # ---------------------------------------------------------------------
     # Welch cross - PSD
     # ---------------------------------------------------------------------
-    S_x, Nfreq, f_scale, win_epoch = spectral_features.gen_STFT(x, L_window, window_type, overlap, Fs, 1)
-    S_y, Nfreq, f_scale, win_epoch = spectral_features.gen_STFT(y, L_window, window_type, overlap, Fs, 1)
+    S_x, Nfreq, f_scale, win_epoch = spectral_features.gen_STFT(
+        x, L_window, window_type, overlap, Fs, 1
+    )
+    S_y, Nfreq, f_scale, win_epoch = spectral_features.gen_STFT(
+        y, L_window, window_type, overlap, Fs, 1
+    )
 
     S_xy = S_x * np.conjugate(S_y)  # check this
 
-    if spec_method.lower() == 'psd':
+    if spec_method.lower() == "psd":
         # ---------------------------------------------------------------
         # Mean for Welch PSD
         # ---------------------------------------------------------------
         pxy = np.nanmean(S_xy, axis=0)  # Check this
-    elif spec_method.lower() == 'robust-psd':
+    elif spec_method.lower() == "robust-psd":
         # ---------------------------------------------------------------
         # Mean for Welch PSD
         # ---------------------------------------------------------------
         pxy = np.nanmedian(S_xy, axis=0)  # Check this
 
     else:
-        raise ValueError('Unknown cross-spectral method %s - check spelling' % spec_method)
+        raise ValueError(
+            "Unknown cross-spectral method %s - check spelling" % spec_method
+        )
 
     # normalise (so similar to Welch's PSD)
-    E_win = np.sum(np.abs(win_epoch)**2) / Nfreq
+    E_win = np.sum(np.abs(win_epoch) ** 2) / Nfreq
     pxy = pxy / (Nfreq * E_win * Fs)
 
     N = len(pxy)
     f_scale = Nfreq / Fs
 
     fp = np.array(range(N)) / f_scale
-
-
-
 
     return pxy, Nfreq, f_scale, fp
 
@@ -112,7 +115,7 @@ def gen_coherence(x, y, Fs, param_st):
     pyy = spectral_features.gen_spectrum(y, Fs, param_st)[0]
     pxy, dum, f_scale, fp = gen_cross_spectrum(x, y, Fs, param_st)
 
-    c = (np.abs(pxy)**2) / (pxx * pyy)
+    c = (np.abs(pxy) ** 2) / (pxx * pyy)
     return c, pxx, pyy, f_scale, fp
 
 
@@ -157,7 +160,7 @@ def rand_phase(x, N_iter=1):
         x = x.transpose()
 
     N = len(x)  # check
-    Nh = np.floor(N/2).astype(int)
+    Nh = np.floor(N / 2).astype(int)
 
     X = np.fft.fft(x)
 
@@ -169,12 +172,15 @@ def rand_phase(x, N_iter=1):
         rphase = np.array(-np.pi + 2 * np.pi * np.random.uniform(0, 1, [N_iter, Nh]))
         rphase = np.hstack([np.zeros([N_iter, 1]), rphase[:, :], -rphase[:, ::-1]])
     else:
-        rphase = np.array(-np.pi + 2 * np.pi * np.random.uniform(0, 1, [N_iter, Nh - 1]))
+        rphase = np.array(
+            -np.pi + 2 * np.pi * np.random.uniform(0, 1, [N_iter, Nh - 1])
+        )
         # rand is to be flipped.
         # rphase = np.array(-np.pi + 2 * np.pi * np.random.uniform(0, 1, [Nh-1, N_iter]))  # Note: to replicate MATLAB
         # rphase = np.transpose(rphase)
-        rphase = np.hstack([np.zeros([N_iter, 1]), rphase, np.zeros([N_iter, 1]), -rphase[:, ::-1]])
-
+        rphase = np.hstack(
+            [np.zeros([N_iter, 1]), rphase, np.zeros([N_iter, 1]), -rphase[:, ::-1]]
+        )
 
     # ---------------------------------------------------------------------
     # apply to spectrum and FFT back to time domain:
@@ -196,7 +202,18 @@ def rand_phase(x, N_iter=1):
     return y
 
 
-def connectivity_BSI(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq_bands, freq_bands, feat_name):
+def connectivity_BSI(
+    x,
+    Fs,
+    params_st,
+    N_channels,
+    ileft,
+    iright,
+    ipairs,
+    N_freq_bands,
+    freq_bands,
+    feat_name,
+):
     """
     ---------------------------------------------------------------------
      brain sysmetry index (revised version, Van Putten, 2007)
@@ -224,7 +241,9 @@ def connectivity_BSI(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
         x_epoch = x[k, :]
         x_epoch = np.delete(x_epoch, np.where(np.isnan(x_epoch))[0])
 
-        tmp, dum, f_scale, dum, fp = spectral_features.gen_spectrum(x_epoch, Fs, params_st, 1)
+        tmp, dum, f_scale, dum, fp = spectral_features.gen_spectrum(
+            x_epoch, Fs, params_st, 1
+        )
         if k == 0:
             X = np.zeros([N_channels, len(tmp)])
         X[k, :] = tmp
@@ -232,7 +251,9 @@ def connectivity_BSI(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
     dum, N = X.shape  # Double check this
 
     if len(ileft) > 1:
-        X_left = np.nanmean(X[ipairs[0, :].astype(int), :], axis=0)  # Check what the 1 does
+        X_left = np.nanmean(
+            X[ipairs[0, :].astype(int), :], axis=0
+        )  # Check what the 1 does
         X_right = np.nanmean(X[ipairs[1, :].astype(int), :], axis=0)  # Again check
     else:
         X_left = X[ileft, :]
@@ -246,18 +267,35 @@ def connectivity_BSI(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
         else:
             istart = ibandpass[-1] - 1
 
-        ibandpass = np.array(range(istart, np.floor(freq_bands[n][1]*f_scale).astype(int)))
+        ibandpass = np.array(
+            range(istart, np.floor(freq_bands[n][1] * f_scale).astype(int))
+        )
         ibandpass = ibandpass + 1
         ibandpass[ibandpass < 0] = 0
         ibandpass[ibandpass > N - 1] = N - 1
 
-        featx[n] = np.nanmean(np.abs((X_left[ibandpass] - X_right[ibandpass]) /
-                                     (X_left[ibandpass] + X_right[ibandpass])))
+        featx[n] = np.nanmean(
+            np.abs(
+                (X_left[ibandpass] - X_right[ibandpass])
+                / (X_left[ibandpass] + X_right[ibandpass])
+            )
+        )
 
     return featx
 
 
-def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq_bands, freq_bands, feat_name):
+def connectivity_coh(
+    x,
+    Fs,
+    params_st,
+    N_channels,
+    ileft,
+    iright,
+    ipairs,
+    N_freq_bands,
+    freq_bands,
+    feat_name,
+):
     """
     ---------------------------------------------------------------------
      coherence (using Welch's PSD)
@@ -276,36 +314,48 @@ def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
     """
     # check to see if using the right PSD estimate
     # (only 'PSD' or 'bartlett-PSD' allowed)
-    if params_st['method'] == 'periodogram' or params_st['method'] == 'robust-PSD':
-        print('----------- -WARNING- ------------\n')
-        print('Must use averaging PSD estimate (e.g. Welch PSD) for coherence.\n')
+    if params_st["method"] == "periodogram" or params_st["method"] == "robust-PSD":
+        print("----------- -WARNING- ------------\n")
+        print("Must use averaging PSD estimate (e.g. Welch PSD) for coherence.\n")
         print('To do so, set: feat_params_st.connectivity.method="PSD"\n')
-        print('in ''NEURAL_parameters.py'' file.\n')
+        print("in " "NEURAL_parameters.py" " file.\n")
 
-        if params_st['coherence_zero_level'].lower() == 'analytic':
-            params_st['method'] = 'bartlett-PSD'
+        if params_st["coherence_zero_level"].lower() == "analytic":
+            params_st["method"] = "bartlett-PSD"
 
-            warnings.warn("Forcing PSD method for connectivity analysis to Bartlett PSD", DeprecationWarning)
+            warnings.warn(
+                "Forcing PSD method for connectivity analysis to Bartlett PSD",
+                DeprecationWarning,
+            )
 
         else:
-            warnings.warn("Forcing PSD method for connectivity analysis to Welch PSD \
-            (may need to adjust window type, window size, and overlap.)", DeprecationWarning)
+            warnings.warn(
+                "Forcing PSD method for connectivity analysis to Welch PSD \
+            (may need to adjust window type, window size, and overlap.)",
+                DeprecationWarning,
+            )
 
-            params_st['method'] = 'PSD'
-        print('------------------------------------------------------------------')
+            params_st["method"] = "PSD"
+        print("------------------------------------------------------------------")
 
-    if params_st['coherence_zero_level'].lower() == 'analytic' and params_st['method'] != 'bartlett-PSD':
+    if (
+        params_st["coherence_zero_level"].lower() == "analytic"
+        and params_st["method"] != "bartlett-PSD"
+    ):
 
         # check if PSD method is Bartlett or not:
-        print('----------- -WARNING- ------------\n')
+        print("----------- -WARNING- ------------\n")
         print("If want to use the analytic zero-level threshold for\n")
         print("coherence (Halliday et al. 1995) then need to use Barlett PSD.\n")
         print("To do so, set: feat_params_st.connectivity.method='bartlett-PSD'\n")
         print("in 'NEURAL_parameters.py' file.\n")
-        warnings.warn(['Forcing PSD method for connectivity analysis to Bartlett PSD'], DeprecationWarning)
-        print('----------------------------------\n')
+        warnings.warn(
+            ["Forcing PSD method for connectivity analysis to Bartlett PSD"],
+            DeprecationWarning,
+        )
+        print("----------------------------------\n")
 
-        params_st['method'] = 'bartlett-PSD'
+        params_st["method"] = "bartlett-PSD"
 
     # PSD and x-PSD
     dum, N_pairs = ipairs.shape
@@ -321,18 +371,20 @@ def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
         x2 = np.delete(x2, np.where(np.isnan(x2))[0])
 
         # 1) estimage the coherence function
-        c, pxx, pyy, f_scale, fp = gen_coherence(x1, x2, Fs, params_st)  # Check size of coh
+        c, pxx, pyy, f_scale, fp = gen_coherence(
+            x1, x2, Fs, params_st
+        )  # Check size of coh
         if p == 0:
             coh = np.empty([N_pairs, len(c)])
         coh[p, :] = c
 
         # 2) if estimating a zero-level threshold for the coherence:
-        if params_st['coherence_zero_level'] == 'surr':
+        if params_st["coherence_zero_level"] == "surr":
             # ---------------------------------------------------------------------
             # if generating a null-hypothesis distribution from surrogate data:
             # ---------------------------------------------------------------------
 
-            L_surr = params_st['coherence_surr_iter']
+            L_surr = params_st["coherence_surr_iter"]
 
             # Generate surrogate signals
             x1_surr = rand_phase(x1, L_surr)
@@ -340,7 +392,9 @@ def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
 
             coh_sur = []  # to suppress warning
             for m in range(L_surr):
-                c_sur, dum, dum, dum, dum = gen_coherence(x1_surr[m, :], x2_surr[m, :], Fs, params_st)
+                c_sur, dum, dum, dum, dum = gen_coherence(
+                    x1_surr[m, :], x2_surr[m, :], Fs, params_st
+                )
                 if m == 0:
                     coh_sur = np.empty([L_surr, len(c_sur)])
                 coh_sur[m, :] = c_sur
@@ -348,21 +402,25 @@ def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
             # estimating frequency-dependent threshold at p < Î± level of significance
             coh_threshold = np.empty([1, len(c_sur)])
             for c in range(len(c_sur)):
-                coh_threshold[:, c] = mat_percentile(coh_sur[:, c], 100*(1 - params_st['coherence_zero_alpha']))
+                coh_threshold[:, c] = mat_percentile(
+                    coh_sur[:, c], 100 * (1 - params_st["coherence_zero_alpha"])
+                )
 
-        elif params_st['coherence_zero_level'] == 'analytic':
+        elif params_st["coherence_zero_level"] == "analytic":
             # ---------------------------------------------------------------------
             # or if using an analytic method
             # ---------------------------------------------------------------------
             # number of segments(no overlap with Bartlett PSD)
-            L = np.floor(len(x1) / (Fs * params_st['L_window']))
+            L = np.floor(len(x1) / (Fs * params_st["L_window"]))
 
-            coh_threshold = 1 - (params_st['coherence_zero_alpha']) ** (1 / (L - 1))
+            coh_threshold = 1 - (params_st["coherence_zero_alpha"]) ** (1 / (L - 1))
 
-        elif params_st['coherence_zero_level'].lower == '':
+        elif params_st["coherence_zero_level"].lower == "":
             coh_threshold = np.array([])
         else:
-            raise ValueError("unknown option for 'coherence_zero_level'; see NEURAL_parameters.py for details")
+            raise ValueError(
+                "unknown option for 'coherence_zero_level'; see NEURAL_parameters.py for details"
+            )
 
         # 3) threshold
 
@@ -378,16 +436,18 @@ def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
             else:
                 istart = ibandpass[-1] - 1
 
-            ibandpass = np.array(range(istart, np.floor(freq_bands[n][1] * f_scale).astype(int)))  # May need +1
+            ibandpass = np.array(
+                range(istart, np.floor(freq_bands[n][1] * f_scale).astype(int))
+            )  # May need +1
             ibandpass = ibandpass + 1
             ibandpass[ibandpass < 0] = 0
             ibandpass[ibandpass > N - 1] = N - 1
 
-            if feat_name == 'connectivity_coh_mean':
+            if feat_name == "connectivity_coh_mean":
                 featx_pairs[n, p] = np.nanmean(coh[p, ibandpass])
-            elif feat_name == 'connectivity_coh_max':
+            elif feat_name == "connectivity_coh_max":
                 featx_pairs[n, p] = np.max(coh[p, ibandpass])
-            elif feat_name == 'connectivity_coh_freqmax':
+            elif feat_name == "connectivity_coh_freqmax":
                 imax = np.argmax(coh[p, ibandpass])
                 featx_pairs[n, p] = fp[ibandpass[imax]]
 
@@ -395,7 +455,18 @@ def connectivity_coh(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq
     return featx
 
 
-def connectivity_corr(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_freq_bands, freq_bands, feat_name):
+def connectivity_corr(
+    x,
+    Fs,
+    params_st,
+    N_channels,
+    ileft,
+    iright,
+    ipairs,
+    N_freq_bands,
+    freq_bands,
+    feat_name,
+):
     """
     ---------------------------------------------------------------------
      cross-correlation (Pearson)
@@ -419,16 +490,25 @@ def connectivity_corr(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_fre
         inans = dict()
         x_filt = np.empty([N_channels, x.shape[1]])
         for p in range(N_channels):
-            x_filt[p, :], inans[p] = utils.filter_butterworth_withnans(x_orig[p, :], Fs, freq_bands[n][1],
-                                                                       freq_bands[n][0], 5,
-                                                                       params_st['FILTER_REPLACE_ARTEFACTS'])
+            x_filt[p, :], inans[p] = utils.filter_butterworth_withnans(
+                x_orig[p, :],
+                Fs,
+                freq_bands[n][1],
+                freq_bands[n][0],
+                5,
+                params_st["FILTER_REPLACE_ARTEFACTS"],
+            )
             x_orig = x.copy()
 
         cc_pairs = np.empty(N_pairs)
         cc_pairs.fill(np.nan)
 
         for p in range(N_pairs):
-            all_inans = np.unique(np.hstack([inans[ipairs[0, p].astype(int)], inans[ipairs[1, p].astype(int)]]))
+            all_inans = np.unique(
+                np.hstack(
+                    [inans[ipairs[0, p].astype(int)], inans[ipairs[1, p].astype(int)]]
+                )
+            )
 
             x1 = x_filt[ipairs[0, p].astype(int), :]
             x2 = x_filt[ipairs[1, p].astype(int), :]
@@ -436,8 +516,8 @@ def connectivity_corr(x, Fs, params_st, N_channels, ileft, iright, ipairs, N_fre
                 x1 = np.delete(x1, all_inans)
                 x2 = np.delete(x2, all_inans)
 
-            env1 = np.abs(signal.hilbert(x1))**2
-            env2 = np.abs(signal.hilbert(x2))**2
+            env1 = np.abs(signal.hilbert(x1)) ** 2
+            env2 = np.abs(signal.hilbert(x2)) ** 2
 
             cc_pairs[p] = stats.pearsonr(env1, env2)[0]
 
@@ -487,7 +567,7 @@ def channel_hemispheres(channels_all):
                     ir = np.append(ir, n)
 
         if il.size != 0 and ir.size != 0:
-            raise ValueError('both odd and even in channel: %s' % cname)
+            raise ValueError("both odd and even in channel: %s" % cname)
 
         if il.size != 0:
             ileft = np.append(ileft, n)
@@ -539,8 +619,13 @@ def channel_hemisphere_pairs(channel_labels):
         ch_left = channel_labels[ileft[n]].upper()
 
         # change numbers from odd to even
-        ch_left_match = str.replace(str.replace(str.replace(str.replace(ch_left, '1', '2'), '3', '4'), '5', '6'),
-                                    '7', '8')  # check this
+        ch_left_match = str.replace(
+            str.replace(
+                str.replace(str.replace(ch_left, "1", "2"), "3", "4"), "5", "6"
+            ),
+            "7",
+            "8",
+        )  # check this
 
         imatch = np.array([])
         for i in range(len(iright)):
@@ -548,10 +633,10 @@ def channel_hemisphere_pairs(channel_labels):
                 imatch = np.array(i)
                 break
         # and check for reversed order
-        sep = str.find(ch_left_match, '-')
+        sep = str.find(ch_left_match, "-")
         ch1 = ch_left_match[:sep]
-        ch2 = ch_left_match[sep + 1:]
-        ch_left_match_rv = ch2 + '-' + ch1
+        ch2 = ch_left_match[sep + 1 :]
+        ch_left_match_rv = ch2 + "-" + ch1
 
         imatch_rv = np.array([])
         for i in range(len(iright)):
@@ -566,7 +651,7 @@ def channel_hemisphere_pairs(channel_labels):
         else:
             ipairs[0:1, n] = np.nan
             if DBverbose:
-                print('no matching pair for channel: %s\n' % ch_left)
+                print("no matching pair for channel: %s\n" % ch_left)
 
         # if left / right side share common electrode (e.g.Cz),
         # then should ignore
@@ -628,53 +713,78 @@ def main_connectivity(x, Fs, feat_name, ch_labels, params=None):
     """
     if params is None:
         params = NEURAL_parameters.NEURAL_parameters()
-        if 'connectivity' in params:
-            params = params['connectivity']
+        if "connectivity" in params:
+            params = params["connectivity"]
         else:
-            raise ValueError('No default parameters found')
+            raise ValueError("No default parameters found")
     elif len(params) == 0:
         params = NEURAL_parameters.NEURAL_parameters()
-        if 'connectivity' in params:
-            params = params['connectivity']
+        if "connectivity" in params:
+            params = params["connectivity"]
         else:
-            raise ValueError('No default parameters found')
-    if 'connectivity' in params:
-        params = params['connectivity']
+            raise ValueError("No default parameters found")
+    if "connectivity" in params:
+        params = params["connectivity"]
 
-
-    freq_bands = np.array(params['freq_bands'])
+    freq_bands = np.array(params["freq_bands"])
 
     N_channels, dum = x.shape
+
+    if N_channels < 2:
+        warnings.warn("Requires at least 2 channels", DeprecationWarning)
+        return np.nan
 
     N_freq_bands, dum = freq_bands.shape
     if N_freq_bands == 0:
         N_freq_bands = 1
 
-    if len(ch_labels) == 0:
-        warnings.warn('Channel labels are needed for connectivity measures')
-        output = np.ones(N_freq_bands)
-        return output.fill(np.nan)
-
-    if N_channels >= 2:
+    ileft = []
+    iright = []
+    ipairs = []
+    if N_channels > 2 and len(ch_labels) != 0:
         ileft, iright = channel_hemispheres(ch_labels)
         ipairs = channel_hemisphere_pairs(ch_labels)
-    else:
-        output = np.ones(N_freq_bands)
-        return output.fill(np.nan)
+    elif N_channels == 2:
+        # if no channel labels then guess
+        ileft = 0
+        iright = 1
+        ipairs = np.array([1, 2])
 
     if ipairs.shape[1] == 0:
-        output = np.ones(N_freq_bands)
-        return output.fill(np.nan)
+        return np.array([np.nan, np.nan, np.nan, np.nan])
     try:
-        if feat_name == 'connectivity_coh_mean' or feat_name == 'connectivity_coh_max' or \
-                feat_name == 'connectivity_coh_freqmax':
+        if (
+            feat_name == "connectivity_coh_mean"
+            or feat_name == "connectivity_coh_max"
+            or feat_name == "connectivity_coh_freqmax"
+        ):
 
-            featx = eval('connectivity_coh')(x, Fs, params, N_channels, ileft, iright, ipairs, N_freq_bands,
-                                         freq_bands, feat_name)
+            featx = eval("connectivity_coh")(
+                x,
+                Fs,
+                params,
+                N_channels,
+                ileft,
+                iright,
+                ipairs,
+                N_freq_bands,
+                freq_bands,
+                feat_name,
+            )
         else:
-            featx = eval(feat_name)(x, Fs, params, N_channels, ileft, iright, ipairs, N_freq_bands, freq_bands,
-                                    feat_name)
+            featx = eval(feat_name)(
+                x,
+                Fs,
+                params,
+                N_channels,
+                ileft,
+                iright,
+                ipairs,
+                N_freq_bands,
+                freq_bands,
+                feat_name,
+            )
     except:
-        raise ValueError('Feature function not found: %s' % feat_name)
+        raise ValueError("Feature function not found: %s" % feat_name)
 
     return featx

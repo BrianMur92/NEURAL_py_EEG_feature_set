@@ -1,12 +1,13 @@
 # Author:       Brian Murphy
 # Date started: 30/01/2020
-# Last updated: <17/02/2020 13:05:11 (BrianM)>
+# Last updated: <25/07/2022 16:40:13 (BrianM)>
 
 import numpy as np
 from scipy import signal
 from scipy import stats
-import utils
-import NEURAL_parameters
+from NEURAL_py_EEG import utils
+from NEURAL_py_EEG import NEURAL_parameters
+
 
 def amplitude_total_power(data):
     """
@@ -17,7 +18,7 @@ def amplitude_total_power(data):
     >signal_power([3,7,8,9,1])
     40.8
     """
-    return np.nanmean(np.abs(data)**2)
+    return np.nanmean(np.abs(data) ** 2)
 
 
 def amplitude_env_mean(data):
@@ -31,8 +32,7 @@ def amplitude_env_mean(data):
 
     """
 
-    return np.nanmean(np.abs(signal.hilbert(data))**2)
-
+    return np.nanmean(np.abs(signal.hilbert(data)) ** 2)
 
 
 def amplitude_SD(data):
@@ -47,7 +47,6 @@ def amplitude_SD(data):
     return np.nanstd(data, ddof=1)
 
 
-
 def amplitude_env_SD(data):
     """
     (list) -> float
@@ -59,8 +58,7 @@ def amplitude_env_SD(data):
 
     """
 
-    return np.nanstd(np.abs(signal.hilbert(data))**2, ddof=1)
-
+    return np.nanstd(np.abs(signal.hilbert(data)) ** 2, ddof=1)
 
 
 def amplitude_skew(data):
@@ -72,7 +70,7 @@ def amplitude_skew(data):
     >signal_skewness([3,7,8,9,1])
     0.4071
     """
-    return np.abs(stats.skew(data, nan_policy='omit'))
+    return np.abs(stats.skew(data, nan_policy="omit"))
 
 
 def amplitude_kurtosis(data):
@@ -113,17 +111,18 @@ def main_amplitude(x, Fs, feat_name, params=None):
     """
     if params is None:
         params = NEURAL_parameters.NEURAL_parameters()
-        if 'amplitude' in params:
-            params = params['amplitude']
+        if "amplitude" in params:
+            params = params["amplitude"]
         else:
-            raise ValueError('No default parameters found')
-    else:
-        if 'amplitude' in params:
-            params = params['amplitude']
+            raise ValueError("No default parameters found")
+    elif len(params) == 0:
+        params = NEURAL_parameters.NEURAL_parameters()
+        if "amplitude" in params:
+            params = params["amplitude"]
         else:
-            raise ValueError('No parameters found')
+            raise ValueError("No default parameters found")
 
-    freq_bands = params['freq_bands']
+    freq_bands = params["freq_bands"]
 
     N_freq_bands = len(freq_bands)
     if N_freq_bands == 0:
@@ -134,8 +133,14 @@ def main_amplitude(x, Fs, feat_name, params=None):
     featx = np.empty(N_freq_bands)
     for n in range(N_freq_bands):
         if not len(freq_bands) == 0:
-            x_filt, dum = utils.filter_butterworth_withnans(x_orig, Fs, freq_bands[n][1], freq_bands[n][0], 5,
-                                                            params['FILTER_REPLACE_ARTEFACTS'])
+            x_filt, dum = utils.filter_butterworth_withnans(
+                x_orig,
+                Fs,
+                freq_bands[n][1],
+                freq_bands[n][0],
+                5,
+                params["FILTER_REPLACE_ARTEFACTS"],
+            )
             x_orig = x.copy()
         else:
             x_filt = x.copy()
@@ -144,6 +149,6 @@ def main_amplitude(x, Fs, feat_name, params=None):
             x_filt = np.delete(x_filt, np.where(np.isnan(x_filt))[0])
             featx[n] = eval(feat_name)(x_filt)
         except:
-            raise ValueError('Feature function not found: %s' % feat_name)
+            raise ValueError("Feature function not found: %s" % feat_name)
 
     return featx
